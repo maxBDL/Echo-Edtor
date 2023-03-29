@@ -8,17 +8,131 @@ import Less from '../icons/Less.vue';
 import More from '../icons/More.vue';
 import { ref } from 'vue'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
+import axios from 'axios'
+// ! remettre a true
+
+const props = defineProps({
+  grid: Array
+})
 
 const open = ref(true);
-
-const bpm = ref(null);
-const npb = ref(null);
+// const bpm = ref(null);
+const npb = ref(16);
 const file = ref(null);
+const audio = ref(null);
 
+//ajout filename
+//
+const song = {
+  title: {
+    value: null,
+    label: 'title'
+  },
+  artist: {
+    value: null,
+    label: 'artist'
+  },
+  jacket: {
+    value: null,
+    label: 'jacket'
+  },
+  difficulty: {
+    value: 'easy',
+    label: 'difficulty'
+  },
+  bpm: {
+    value: 128,
+    label: 'bpm'
+  },
+  volume: {
+    value: 75,
+    label: 'vol'
+  },
+  bg: {
+    value: null,
+    label: 'bg'
+  },
+}
+// jacket => '.jpg'
+// difficulty => Easy/Medium/Hard
 
-const onSubmit = () => {
-  console.log("toto");
+const fileConstruct = () => {
+  var text = '';
+  console.log(song);
+  for (const [key, data] of Object.entries(song)) {
+    text += data.label+'='+data.value+'\r';
+  } 
+  text += '-- \r'
+  for (let i = 0; i < props.grid[0].length; i++) {
+    for (let j = 0; j < props.grid.length; j++) {
+      text += props.grid[j][i]
+    }
+    text += '|00 \r'
+    if ((i+1) % npb.value == 0) {
+      text += '--  \r';
+    }
+  }
+  console.log(text);
+  return text;
+}
+
+const onSubmit = async () => {
+  const file = fileConstruct();
+  console.log(file);
+  const grid = props.grid;
+  const gridBlob = new Blob([file], {type: "octet/stream"});
+  const imageURL = URL.createObjectURL(gridBlob);
+  const anchor = document.createElement("a");
+  anchor.href = imageURL;
+  anchor.download = "track.pe";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL( imageURL);
 };
+
+
+
+
+
+const onFileChange = (e) => {
+  var files = e.target.files || e.dataTransfer.files;
+  if (!files.length)
+    return;
+  file.value = files[0];
+  console.log(file.value);
+  // createImage(files[0]);
+
+  const urlObj = URL.createObjectURL(file.value);
+  audio.value = new Audio(urlObj);
+
+  // Create an audio element
+  // audio.value = document.createElement("audio");
+
+  // Clean up the URL Object after we are done with it
+  // audio.addEventListener("load", () => {
+  //   URL.revokeObjectURL(urlObj);
+  // });
+
+  // Append the audio element
+  // document.body.appendChild(audio);
+
+  // Allow us to control the audio
+  audio.controls = "true";
+
+  // Set the src and start loading the audio from the file
+  audio.src = urlObj;
+  // console.log(document.getElementsByTagName('audio'));.play();
+  // audio.play();
+  console.log(audio);
+};
+
+const removeImage = (e) => {
+  this.image = '';
+};
+
+
+
 
 </script>
 
@@ -31,7 +145,7 @@ const onSubmit = () => {
       <HeaderButtonVue>
         <Delete />
       </HeaderButtonVue>
-      <HeaderButtonVue @click="" >
+      <HeaderButtonVue @click="">
         <Play />
         <!-- <Play v-if="play"/>
         <Pause v-else/> -->
@@ -40,7 +154,7 @@ const onSubmit = () => {
         <Upload />
       </HeaderButtonVue>
       <HeaderButtonVue>
-        <Download />
+        <Download @click="onSubmit"/>
       </HeaderButtonVue>
     </div>
 
@@ -80,11 +194,13 @@ const onSubmit = () => {
                     <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900">
                       Upload song</DialogTitle>
                     <div>
+                      {{ file }}
+                      {{ audio }}
                       <form action="#" method="POST" @submit.prevent="onSubmit">
                         <div class="space-y-6 bg-white px-4 py-5 sm:p-6 w-full">
                           <div class="col-span-6 sm:col-span-3">
                             <label for="npb" class="block text-sm font-medium text-gray-700">Note per Beat</label>
-                            <select v-model="npm" id="npb" name="note_per_beat" autocomplete="country-name"
+                            <select v-model="npb" id="npb" name="note_per_beat" autocomplete="country-name"
                               class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
                               <option>4</option>
                               <option>8</option>
@@ -96,7 +212,7 @@ const onSubmit = () => {
 
                           <div class="col-span-6 sm:col-span-3 lg:col-span-2">
                             <label for="bpm" class="block text-sm font-medium text-gray-700">BPM</label>
-                            <input v-model="bpm" type="bpm" name="bpm" id="postal-code" autocomplete="postal-code"
+                            <input v-model="song.bpm.value" type="bpm" name="bpm" id="postal-code" autocomplete="postal-code"
                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                           </div>
 
@@ -115,7 +231,8 @@ const onSubmit = () => {
                                   <label for="file-upload"
                                     class="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500">
                                     <span>Upload a file</span>
-                                    <input id="file-upload" name="file-upload" type="file" class="sr-only" />
+                                    <input id="file-upload" name="file-upload" type="file" class="sr-only"
+                                      @change="onFileChange" accept=".mp3,audio/*" />
                                   </label>
                                   <p class="pl-1">or drag and drop</p>
                                 </div>
@@ -127,9 +244,8 @@ const onSubmit = () => {
                         <div class="bg-gray-50 px-4 py-3 text-right sm:px-6">
                           <button type="button" @click="open = false" ref="cancelButtonRef"
                             class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Cancel</button>
-                            <button type="submit"
-                            class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                           >Save</button>
+                          <button type="submit"
+                            class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Save</button>
                         </div>
                       </form>
                     </div>

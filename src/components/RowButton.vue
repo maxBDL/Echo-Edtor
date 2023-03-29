@@ -1,35 +1,45 @@
 <script setup>
-import Button from '../components/Button.vue'
-
-// const props = defineProps({
-//     nbButtons
-// });
+import Button from '../components/Button.vue';
+import { ref } from 'vue';
 
 const props = defineProps({
     color: {
         required: true,
+    },
+    nbButtons: {
+        required: true,
     }
 });
-// const colors = ['purple', 'green', 'orange', 'blue'];
 
-// const colors = {
-//     purple: '#6054AA',
-//     green: '#3FAE74',
-//     orange: '#D85E49',
-//     blue: '#4BBBCF'
-// }
+const resultRow = ref([]);
 
+const init = () => {
+    for(let i = 0; i < props.nbButtons; i++ ) {
+        resultRow.value.push(0);
+    }
+}
+const emit = defineEmits(['resultRow']);
+
+const onUpdateResult = ({id, active}) => {
+    resultRow.value[id] = active ? 1 : 0; ;
+    emit('resultRow', resultRow.value)
+}
+
+
+
+init();
 </script>
 
 <template>
+        <!-- {{ resultRow }} -->
     <div class="bg-dark border border-light_green w-fit flex flex-row items-center">
-        <Button v-for="i in 15" :color="props.color" />
+        <Button v-for="i in props.nbButtons" :color="props.color" :id="i - 1" @updatedValue="onUpdateResult"/>
     </div>
 </template>
 
 <style scoped>
-div{
-    height: 125px;
-    max-height: 125px;
+div {
+    height: 75px;
+    max-height: 75px;
 }
 </style>

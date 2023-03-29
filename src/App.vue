@@ -2,19 +2,19 @@
 import ButtonVue from './components/Button.vue';
 import HeaderVue from './layout/Header.vue';
 import Body from './layout/Body.vue';
-const red = 'red';
+import { ref } from 'vue';
+
+const grid = ref([]);
+
+const onUpdateGrid = (e) => {
+ grid.value = e;
+}
+
 </script>
 
 <template class="h-full w-full">
-  <HeaderVue></HeaderVue>
-
-  <Body></Body>
-
-  <!-- yo
-
-  <div class="flex flex-row content-center overflow-auto">
-    <ButtonVue v-for="i in 20" :key="i" :color="red" />
-  </div> -->
+  <HeaderVue :grid="grid"></HeaderVue>
+  <Body @updateGridValue="onUpdateGrid"></Body>
   
 </template>
 
