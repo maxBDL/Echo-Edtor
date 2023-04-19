@@ -31,7 +31,6 @@ init();
 </script>
 
 <template>
-        <!-- {{ resultRow }} -->
     <div class="bg-dark border border-light_green w-fit flex flex-row items-center">
         <Button v-for="i in props.nbButtons" :color="props.color" :id="i - 1" @updatedValue="onUpdateResult"/>
     </div>

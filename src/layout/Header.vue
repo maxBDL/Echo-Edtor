@@ -2,11 +2,12 @@
 import HeaderButtonVue from '../components/HeaderButton.vue';
 import Delete from '../icons/Delete.vue';
 import Play from '../icons/Play.vue';
+import Pause from '../icons/Pause.vue';
 import Upload from '../icons/Upload.vue';
 import Download from '../icons/Download.vue';
 import Less from '../icons/Less.vue';
 import More from '../icons/More.vue';
-import { ref } from 'vue'
+import { ref,nextTick } from 'vue'
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue'
 import axios from 'axios'
 // ! remettre a true
@@ -15,14 +16,17 @@ const props = defineProps({
   grid: Array
 })
 
+const emit = defineEmits(['audioCreated', 'audioDuration']);
+
 const open = ref(true);
 // const bpm = ref(null);
 const npb = ref(16);
 const file = ref(null);
 const audio = ref(null);
+const duration = ref(null);
+const listen = ref(true);
 
 //ajout filename
-//
 const song = {
   title: {
     value: null,
@@ -58,10 +62,12 @@ const song = {
 
 const fileConstruct = () => {
   var text = '';
-  console.log(song);
+
+  //initialize header of file
   for (const [key, data] of Object.entries(song)) {
     text += data.label+'='+data.value+'\r';
-  } 
+  }
+
   text += '-- \r'
   for (let i = 0; i < props.grid[0].length; i++) {
     for (let j = 0; j < props.grid.length; j++) {
@@ -72,67 +78,60 @@ const fileConstruct = () => {
       text += '--  \r';
     }
   }
-  console.log(text);
   return text;
 }
 
 const onSubmit = async () => {
   const file = fileConstruct();
-  console.log(file);
   const grid = props.grid;
   const gridBlob = new Blob([file], {type: "octet/stream"});
   const imageURL = URL.createObjectURL(gridBlob);
   const anchor = document.createElement("a");
   anchor.href = imageURL;
-  anchor.download = "track.pe";
+  anchor.download = song.title.value+".pe";
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL( imageURL);
 };
 
-
-
-
-
 const onFileChange = (e) => {
   var files = e.target.files || e.dataTransfer.files;
   if (!files.length)
     return;
   file.value = files[0];
-  console.log(file.value);
-  // createImage(files[0]);
+  song.title.value = file.value.name.replaceAll(' ', '_');
 
   const urlObj = URL.createObjectURL(file.value);
   audio.value = new Audio(urlObj);
-
-  // Create an audio element
-  // audio.value = document.createElement("audio");
-
-  // Clean up the URL Object after we are done with it
-  // audio.addEventListener("load", () => {
-  //   URL.revokeObjectURL(urlObj);
-  // });
-
-  // Append the audio element
-  // document.body.appendChild(audio);
 
   // Allow us to control the audio
   audio.controls = "true";
 
   // Set the src and start loading the audio from the file
   audio.src = urlObj;
-  // console.log(document.getElementsByTagName('audio'));.play();
-  // audio.play();
-  console.log(audio);
+  emit('audioCreated', audio.src);
+  const audioEl = document.getElementsByTagName('audio')[0];
+  audio.value.onloadedmetadata = () => {
+    duration.value = Math.round(audio.value.duration);
+    const bps = Math.round(song.bpm.value / 60);
+    emit('audioDuration', {duration: duration.value, bps: bps, npb: npb.value});
+  }
+  open.value = false;
 };
 
-const removeImage = (e) => {
-  this.image = '';
-};
 
+const play = () => {
+  const audioEl = document.getElementsByTagName('audio')[0];
+  audioEl.play();
+  listen.value = !listen.value
+}
 
-
+const pause = () => {
+  const audioEl = document.getElementsByTagName('audio')[0];
+  audioEl.pause();
+  listen.value = !listen.value
+}
 
 </script>
 
@@ -142,14 +141,13 @@ const removeImage = (e) => {
     <img src="../assets/img/logo.png" width="90" alt="Echo editor logo">
 
     <div class="flex flex-row flex-wrap content-center justify-evenly">
-      <HeaderButtonVue>
-        <Delete />
+      <HeaderButtonVue v-if="listen" @click="play">
+        <Play/>
       </HeaderButtonVue>
-      <HeaderButtonVue @click="">
-        <Play />
-        <!-- <Play v-if="play"/>
-        <Pause v-else/> -->
+      <HeaderButtonVue v-else @click="pause">
+        <Pause/>
       </HeaderButtonVue>
+
       <HeaderButtonVue @click="open = true">
         <Upload />
       </HeaderButtonVue>
@@ -157,19 +155,6 @@ const removeImage = (e) => {
         <Download @click="onSubmit"/>
       </HeaderButtonVue>
     </div>
-
-    <div class="bg-dark border-2 border-light_green rounded-xl flex content-center flex-wrap" height="50">
-      <span class="p-1 font-sans text-light_green font-bold text-2xl">00:00:00</span>
-    </div>
-
-    <!-- <div class="flex flex-row flex-wrap content-center justify-evenly">
-      <HeaderButtonVue>
-        <Less />
-      </HeaderButtonVue>
-      <HeaderButtonVue>
-        <More />
-      </HeaderButtonVue>
-    </div> -->
   </nav>
 
   <TransitionRoot as="template" :show="open">
@@ -241,26 +226,12 @@ const removeImage = (e) => {
                             </div>
                           </div>
                         </div>
-                        <div class="bg-gray-50 px-4 py-3 text-right sm:px-6">
-                          <button type="button" @click="open = false" ref="cancelButtonRef"
-                            class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Cancel</button>
-                          <button type="submit"
-                            class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Save</button>
-                        </div>
                       </form>
                     </div>
 
                   </div>
                 </div>
               </div>
-              <!-- <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                <button type="button"
-                  class="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
-                  @click="open = false">Deactivate</button>
-                <button type="button"
-                  class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  @click="open = false" ref="cancelButtonRef">Cancel</button>
-              </div> -->
             </DialogPanel>
           </TransitionChild>
         </div>
